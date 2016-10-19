@@ -1,0 +1,312 @@
+<!DOCTYPE HTML>
+<html>
+
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<title>遗址厅</title>
+		<link rel="stylesheet" type="text/css" href="css/base.css" />
+	</head>
+
+	<body>
+		<div id="search">
+			<a href="javascript:;" id="search_bt"></a>
+			<input type="text" placeholder="搜展厅、厕所、安全口" id="search_t" disabled>
+		</div>
+		<span id="prompt">
+			遗址厅
+		</span>
+		<div id="footer">
+			<div class="button" id="tuijian">
+				推荐路线
+			</div>
+			<ul id="server" style="display: none;">
+				<li class="button" data-index="0">咨询/接待处</li>
+				<li class="button" data-index="1">厕所</li>
+				<li class="button" data-index="2">办公区</li>
+				<li class="button" data-index="3">安全口</li>
+			</ul>
+			<div class="menu2" style="display: none;">
+				<div class="button server">
+					服务
+				</div>
+				<div id="next">
+					<a class="button up active">上一步</a>
+					<a class="button next">下一步</a>
+				</div>
+			</div>
+		</div>
+		<div id="rose"></div>
+		<ul id="areaMenu">
+			<li data-index="1">馆区图</li>
+			<li data-index="2">展厅馆</li>
+			<li class="active" data-index="3">遗址厅</li>
+		</ul>
+		<div id="line">
+			<span id="m">3000m</span>
+			<img src="img/line_03.png" />
+		</div>
+		<ul id="operate">
+			<li class="add"></li>
+			<li class="cut"></li>
+		</ul>
+		<div id="shade">
+			<i class="close"></i>
+			<div class="img"></div>
+		</div>
+		<div id="produce">
+			<h3 id="name"></h3>
+			<i class="close"></i>
+			<div>
+				<p id="desc"></p>
+				<img src="" id="desc_img">
+			</div>
+		</div>
+		<div id="main">
+			<div id="map"></div>
+		</div>
+	</body>
+	<script src="js/zepto.min.js" type="text/javascript" charset="utf-8"></script>
+	<script src="js/touch-0.2.14.min.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript" src="./js/raphael.js"></script>
+	<script type="text/javascript" src="./js/yzt.js"></script>
+	<script src="js/compass.js" type="text/javascript" charset="utf-8"></script>
+	<script src="js/base.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript">
+		var R = Raphael("map", 8575, 4247),
+			cs, _line;
+		window.onresize = function() {
+			resize(8575, 4247);
+		}
+		window.onload = function() {
+			//调用绘制地图方法
+			paintMap(R);
+			resize(8575, 4247);
+			_line = R.path(line).attr({
+				"fill": "#0cb133",
+				"stroke": "#0cb133",
+				"stroke-width": 0
+			}).drag(move, start, end).hide();
+			for (var i = 0; i < line_point.length; i++) {
+				line_point[i]["point"] = R.image("./img/line_point.png", line_point[i]["x"], line_point[i]["y"], 74, 74).transform("r" + 90 * line_point[i]["d"] + "deg").drag(move, start, end).hide();;
+			}
+			var cj = {
+				"fill": "#c98c07",
+				"font-size": "100px",
+				"font-weight": "bold"
+			};
+			var title = {
+				"fill": "#000",
+				"font-size": "150px",
+				"font-weight": "bold"
+			};
+			var tt = {
+				"fill": "#c98c07",
+				"font-size": "80px",
+				"font-weight": "bold",
+				"writing-mode": "tb"
+			};
+			//输出形状文字
+			for (var state in shape) {
+				shape[state]['path'].color = Raphael.getColor(0.9);
+				(function(st, state) {
+					//获取当前图形的中心坐标
+					var xx = st.getBBox().x + (st.getBBox().width / 2);
+					var yy = st.getBBox().y + (st.getBBox().height / 2);
+					//***修改部分地图文字偏移坐标
+					switch (shape[state]['name']) {
+						case "前厅":
+							xx -= 500;
+							yy += 400;
+							break;
+						case "中厅":
+							yy += 350;
+							break;
+						case "厕所":
+							xx += 90;
+							yy -= 100;
+							break;
+						case "门厅":
+							yy += 100;
+							break;
+						case "休息厅":
+							yy += 200;
+							break;
+						default:
+					}
+					//判断样式
+					var cs;
+					if (shape[state]['istitle']) {
+						cs = title;
+					} else {
+						cs = cj;
+					}
+					//写入文字
+					shape[state]['text'] = R.text(xx - 100, yy - 100, shape[state]['name']).attr(cs).transform("r" + (shape[state]["roate"] ? shape[state]["roate"] : 0) + "deg").drag(move, start, end);
+					st.drag(move, start, end);
+				})(shape[state]['path'], state);
+			}
+			//输出方状点
+			for (var i = 0; i < circle.length; i++) {
+				circle[i]["point"] = R.image("./img/circle.png", circle[i]["x"], circle[i]["y"], 93, 93).drag(move, start, end).touchstart(function(e) {
+					showPoint(e);
+				});;
+				var rax_x = circle[i]["x"],
+					rax_y = circle[i]["y"],
+					d = 45 * circle[i]["name"].length;
+				switch (circle[i]["direction"]) {
+					case 1:
+						rax_x += 50;
+						rax_y -= d - 100;
+						break;
+					case 2:
+						rax_y += 50;
+						rax_x += d;
+						break;
+					case 3:
+						rax_x += 50;
+						rax_y += 150;
+						break;
+					case 4:
+						rax_y += 50;
+						rax_x -= d;
+				}
+				switch (circle[i]["name"]) {
+					case "测年表":
+						rax_x += 100;
+						break;
+				}
+				R.text(rax_x, rax_y, circle[i]["name"]).attr(tt).transform("r" + (circle[i]["roate"] ? circle[i]["roate"] : 0) + "deg").drag(move, start, end);
+			}
+			//输出星状点
+			for (var i = 0; i < starts.length; i++) {
+				var rax_x = starts[i]["x"],
+					rax_y = starts[i]["y"],
+					d = 45 * starts[i]["name"].length;
+				starts[i]["point"] = R.image("./img/start.png", starts[i]["x"], starts[i]["y"], 93, 93).touchstart(function(e) {
+					showPoint(e);
+				});
+				switch (starts[i]["direction"]) {
+					case 1:
+						rax_x += 50;
+						rax_y -= 50;
+						break;
+					case 2:
+						rax_y += 50;
+						rax_x += d + 100;
+						break;
+					case 3:
+						rax_x += 50;
+						rax_y += 150;
+						break;
+					case 4:
+						rax_y += 50;
+						rax_x -= d;
+				}
+				switch (starts[i]["name"]) {
+					case "双肢骨竖立之谜":
+						rax_x -= 170;
+						rax_y -= 70;
+						break;
+				}
+				R.text(rax_x, rax_y, starts[i]["name"]).attr(tt).transform("r" + (starts[i]["roate"] ? starts[i]["roate"] : 0) + "deg").drag(move, start, end);
+			}
+			cs = R.image("./img/cs.png", 4561, 3702, 356, 356).drag(move, start, end);
+			var t = getQueryString("index");
+			if (t) {
+				var arrayPoint = circle.concat(starts);
+				if (arrayPoint.length == t) {
+					$("#search_t").val("厕所");
+					showPoint(cs);
+				} else {
+					$("#search_t").val(arrayPoint[t]["name"]);
+					showPoint(arrayPoint[t]["point"]);
+				}
+			}
+		}
+		$(function() {
+//			touch.on('#map', 'pinchout', function(ev) {
+//				var m = $("#m").data("m");
+//				var old_rax = parseFloat($("#map svg").attr("data-old-rax")) || 0,
+//					rax = parseFloat($("#map svg").attr("data-rax")) || 0;
+//				var ww = $("#map svg").data("translate_x") || 0,
+//					hh = $("#map svg").data("translate_y") || 0;
+//				var dd = (0.5 - old_rax) / 6;
+//				if (m == "1") {
+//					return false;
+//				}
+//				rax += dd;
+//				m = m == 500 ? 1 : m - 500;
+//				if (rax > 0.5) {
+//					rax = 0.5;
+//				}
+//				$("#map svg").css({
+//					"-webkit-transform": 'translate(' + ww + 'px,' + hh + 'px) ' + 'scale(' + rax + ',' + rax + ') ',
+//					'transform': 'translate(' + ww + 'px,' + hh + 'px) ' + 'scale(' + rax + ',' + rax + ') '
+//				}).attr({
+//					"data-translate_x": ww,
+//					"data-translate_y": hh,
+//					"data-rax": rax
+//				});
+//				R.safari();
+//				$("#m").html(m + "m").data("m", m);
+//				return false;
+//			});
+//			touch.on('#map', 'pinchin', function(ev) {
+//				var m = $("#m").data("m");
+//				var old_rax = parseFloat($("#map svg").attr("data-old-rax")) || 0,
+//					rax = parseFloat($("#map svg").attr("data-rax")) || 0;
+//				var ww = $("#map svg").data("translate_x") || 0,
+//					hh = $("#map svg").data("translate_y") || 0;
+//				var dd = (0.5 - old_rax) / 6;
+//				rax -= dd;
+//				m = (m == 1 ? 0 : m) + 500;
+//				if (rax < old_rax) {
+//					rax = old_rax;
+//					m = 3000;
+//					ww = $("#map svg").data("translate_old_x");
+//					hh = $("#map svg").data("translate_old_y");
+//					$("#map svg").css({
+//						"-webkit-transform-origin": "center center",
+//						"transform-origin": "center center"
+//					});
+//				}
+//				$("#map svg").css({
+//					"-webkit-transform": 'translate(' + ww + 'px,' + hh + 'px) ' + 'scale(' + rax + ',' + rax + ') ',
+//					'transform': 'translate(' + ww + 'px,' + hh + 'px) ' + 'scale(' + rax + ',' + rax + ') '
+//				}).attr({
+//					"data-translate_x": ww,
+//					"data-translate_y": hh,
+//					"data-rax": rax
+//				});
+//				R.safari();
+//				$("#m").html(m + "m").data("m", m);
+//				return false;
+//			});
+			$("#server").on("tap", "li", function() {
+				var i = $(this).data("index");
+				$("#server>li").removeClass("active");
+				$(this).addClass("active");
+				$("img>a").css("display", "none");
+				showPoint(starts[0]["point"]);
+				switch (i) {
+					case 0:
+						showPoint(circle[0]["point"]);
+						break;
+					case 1:
+						showPoint(cs);
+						break;
+					case 2:
+						//						showPoint(Array("办公区"));
+						break;
+					case 3:
+						//						showPoint(Array("大门"));
+						break;
+					default:
+						break;
+				}
+			});
+		});
+	</script>
+
+</html>
